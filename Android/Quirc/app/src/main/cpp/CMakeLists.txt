@@ -27,6 +27,9 @@ add_library( # Sets the name of the library.
         native-lib.cpp
 
         ../../../../../../lib/quirc.c
+        ../../../../../../lib/decode.c
+        ../../../../../../lib/identify.c
+        ../../../../../../lib/version_db.c
         )
 
 # Searches for a specified prebuilt library and stores the path as a
