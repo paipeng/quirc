@@ -22,63 +22,54 @@ Java_com_s2icode_quirc_QuircUtils_decode(JNIEnv *env, jobject thiz, jbyteArray d
                                          jint height) {
     // TODO: implement decode()
     jbyte *data_ = env->GetByteArrayElements(data, NULL);
+    uint8_t *image;
+    int w, h;
+    int y;
+
+    int num_codes;
+    int i;
+    struct quirc_code code;
+    struct quirc_data qrdata;
+
+
     LOGV("jni decode image size: %d-%d\n", width, height);
     struct quirc *qr;
 
+    // 1. create object
     qr = quirc_new();
     if (!qr) {
         LOGV("Failed to allocate memory");
-        abort();
+        return NULL;
     }
 
+    // 2. alloc memory for holding pixel data
     if (quirc_resize(qr, width, height) < 0) {
         LOGV("couldn't allocate QR buffer");
+        quirc_destroy(qr);
         return NULL;
     }
 
 
-    uint8_t *image;
-    int w, h;
-
+    // 3. git pointer of pixels
     image = quirc_begin(qr, &w, &h);
     LOGV("quirc_begin size: %d-%d\n", w, h);
-    int y;
 
+    // 4. copy pixels (given gray pixel, quirc use uint_8 (unsigned char) gray)
     memcpy(image, data_, sizeof(uint8_t)*w*h);
-#if 0
-    for (y = 0; y < height; y++) {
-        const char *rgb32 = ((char*)data_ + width * y);
-        uint8_t *gray = image + y * width;
-        int i;
 
-        for (i = 0; i < width; i++) {
-            *(gray++) = rgb32[0];
-            /* ITU-R colorspace assumed */
-            //int r = rgb32[0];
-            //int g = (int)rgb32[1];
-            //int b = (int)rgb32[0];
-            //int sum = r * 59 + r * 150 + r * 29;
-
-            //*(gray++) = sum >> 8;
-            rgb32 ++;
-        }
-    }
-#endif
+    // 5. stop modifing pixels (starting find/scan)
     quirc_end(qr);
 
 
 
-    int num_codes;
-    int i;
 
     /* We've previously fed an image to the decoder via
     * quirc_begin/quirc_end.
     */
 
+    // 6. check find qr count
     num_codes = quirc_count(qr);
     LOGV("quirc_count: %d\n", num_codes);
-    struct quirc_code code;
-    struct quirc_data qrdata;
     memset(&qrdata, 0, sizeof(struct quirc_data));
 
     for (i = 0; i < num_codes; i++) {
@@ -95,47 +86,8 @@ Java_com_s2icode_quirc_QuircUtils_decode(JNIEnv *env, jobject thiz, jbyteArray d
     }
 
 
+    // 7. destroy qr object at the end after decoding
     quirc_destroy(qr);
 
     return env->NewStringUTF((char*)qrdata.payload);
-#if 0
-
-
-    uint8_t *image;
-    int w, h;
-
-    image = quirc_begin(qr, &w, &h);
-
-    /* Fill out the image buffer here.
-     * image is a pointer to a w*h bytes.
-     * One byte per pixel, w pixels per line, h lines in the buffer.
-     */
-
-    quirc_end(qr);
-
-    int y;
-
-    for (y = 0; y < height; y++) {
-        const char *rgb32 = ((char*)data + width * y);
-        uint8_t *gray = image + y * width;
-        int i;
-
-        for (i = 0; i < width; i++) {
-            /* ITU-R colorspace assumed */
-            int r = *rgb32;
-            //int g = (int)rgb32[1];
-            //int b = (int)rgb32[0];
-            int sum = r * 59 + r * 150 + r * 29;
-
-            *(gray++) = sum >> 8;
-            rgb32 ++;
-        }
-    }
-
-
-
-
-#else
-    //return env->NewStringUTF("Test only");
-#endif
 }
